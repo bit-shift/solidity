@@ -40,6 +40,8 @@
 
 #include <limits>
 
+#include <boost/multiprecision/cpp_dec_float.hpp>
+
 using namespace std;
 using namespace dev;
 using namespace dev::solidity;
@@ -47,8 +49,23 @@ using namespace dev::solidity;
 namespace
 {
 
-uint32_t static const exponentLimit = 9999;
-bigint static const rationalNumberMax = (bigint(2) << 4096) - 1;
+bool fitsPrecision(bigint const _base, bigint const _exp)
+{
+	using boost::multiprecision::log10;
+	using boost::multiprecision::ceil;
+	using bigfloat = boost::multiprecision::number<boost::multiprecision::cpp_dec_float<50>>;
+
+	size_t const bitsMax = 4096;
+	bigint const baseMax = (bigint(2) << bitsMax) - 1;
+	if(_base > baseMax)
+		return false;
+
+	bigfloat bitsNeeded = bigfloat(_exp) * ceil(log10(bigfloat(_base + 1)));
+	if (bitsNeeded > bitsMax)
+		return false;
+
+	return true;
+}
 
 }
 
@@ -467,7 +484,7 @@ bigint IntegerType::maxValue() const
 }
 
 TypePointer IntegerType::binaryOperatorResult(Token::Value _operator, TypePointer const& _other) const
-{	
+{
 	if (
 		_other->category() != Category::RationalNumber &&
 		_other->category() != Category::FixedPoint &&
@@ -697,18 +714,13 @@ tuple<bool, rational> RationalNumberType::isValidLiteral(Literal const& _literal
 		}
 		else if (expPoint != _literal.value().end())
 		{
-			// parse the exponent and check limits
+			// Parse base and exponent. Checks numeric limit.
 			bigint exp = bigint(string(expPoint + 1, _literal.value().end()));
-
-			if (exp > numeric_limits<int32_t>::max() || exp < numeric_limits<int32_t>::min())
-				return make_tuple(false, rational(0));
-
-			if (abs(exp) >= exponentLimit)
-				return make_tuple(false, rational(0));
-
-			// parse the base
 			tuple<bool, rational> base = parseRational(string(_literal.value().begin(), expPoint));
+
 			if (!get<0>(base))
+				return make_tuple(false, rational(0));
+			if (!fitsPrecision(get<1>(base).numerator(), exp))
 				return make_tuple(false, rational(0));
 			value = get<1>(base);
 
@@ -931,7 +943,7 @@ TypePointer RationalNumberType::binaryOperatorResult(Token::Value _operator, Typ
 			bigint denominator = pow(m_value.denominator(), exponent);
 
 			// Limit size to 4096 bits
-			if (numerator >= rationalNumberMax)
+			if (!fitsPrecision(numerator, exponent))
 				return TypePointer();
 
 			if (other.m_value >= 0)
