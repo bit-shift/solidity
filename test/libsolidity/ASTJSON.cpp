@@ -189,12 +189,11 @@ BOOST_AUTO_TEST_CASE(short_type_name)
 	c.parseAndAnalyze();
 	map<string, unsigned> sourceIndices;
 	sourceIndices["a"] = 1;
-	Json::Value astJson = ASTJsonConverter(true, sourceIndices).toJson(c.ast("a"));
-	Json::Value varDecl = astJson["children"][0]["children"][0]["children"][2]["children"][0]["children"][0];
-	BOOST_CHECK_EQUAL(varDecl["attributes"]["storageLocation"], "memory");
-	BOOST_CHECK_EQUAL(varDecl["attributes"]["type"], "uint256[]");
-	Json::Value arrayType = varDecl["children"][0];
-	BOOST_CHECK_EQUAL(arrayType["attributes"]["type"], "uint256[]");
+	Json::Value astJson = ASTJsonConverter(false, sourceIndices).toJson(c.ast("a"));
+	Json::Value varDecl = astJson["nodes"][0]["nodes"][0]["body"]["statements"][0]["declarations"][0];
+	BOOST_CHECK_EQUAL(varDecl["storageLocation"], "memory");
+	BOOST_CHECK_EQUAL(varDecl["typeDescriptions"]["typeIdentifier"], "t_array$_t_uint256_$dyn_memory_ptr");
+	BOOST_CHECK_EQUAL(varDecl["typeDescriptions"]["typeString"], "uint256[]");
 }
 
 BOOST_AUTO_TEST_CASE(short_type_name_ref)
@@ -205,12 +204,11 @@ BOOST_AUTO_TEST_CASE(short_type_name_ref)
 	c.parseAndAnalyze();
 	map<string, unsigned> sourceIndices;
 	sourceIndices["a"] = 1;
-	Json::Value astJson = ASTJsonConverter(true, sourceIndices).toJson(c.ast("a"));
-	Json::Value varDecl = astJson["children"][0]["children"][0]["children"][2]["children"][0]["children"][0];
-	BOOST_CHECK_EQUAL(varDecl["attributes"]["storageLocation"], "memory");
-	BOOST_CHECK_EQUAL(varDecl["attributes"]["type"], "uint256[][]");
-	Json::Value arrayType = varDecl["children"][0];
-	BOOST_CHECK_EQUAL(arrayType["attributes"]["type"], "uint256[][]");
+	Json::Value astJson = ASTJsonConverter(false, sourceIndices).toJson(c.ast("a"));
+	Json::Value varDecl = astJson["nodes"][0]["nodes"][0]["body"]["statements"][0]["declarations"][0];
+	BOOST_CHECK_EQUAL(varDecl["storageLocation"], "memory");
+	BOOST_CHECK_EQUAL(varDecl["typeName"]["typeDescriptions"]["typeIdentifier"], "t_array$_t_array$_t_uint256_$dyn_storage_$dyn_storage_ptr");
+	BOOST_CHECK_EQUAL(varDecl["typeName"]["typeDescriptions"]["typeString"], "uint256[][]");
 }
 
 BOOST_AUTO_TEST_CASE(placeholder_statement)
