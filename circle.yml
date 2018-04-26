@@ -87,7 +87,7 @@ jobs:
           command: |
             . /usr/local/nvm/nvm.sh
             test/externalTests.sh /tmp/workspace/soljson.js || test/externalTests.sh /tmp/workspace/soljson.js
-  build_x86:
+  build_x86_linux:
     docker:
       - image: buildpack-deps:artful
     steps:
@@ -119,7 +119,40 @@ jobs:
             - test/soltest
             - test/tools/solfuzzer
 
-  test_x86:
+  build_x86_mac:
+    macos:
+      xcode: "9.0"
+    steps:
+      - checkout
+      - run:
+          name: Install build dependencies
+          command: |
+            brew update
+            brew install boost
+            brew install cmake
+      - run:
+          name: Store commit hash and prerelease
+          command: |
+            if [ "$CIRCLE_BRANCH" = release -o -n "$CIRCLE_TAG" ]; then echo -n > prerelease.txt; else date -u +"nightly.%Y.%-m.%-d" > prerelease.txt; fi
+            echo -n "$CIRCLE_SHA1" > commit_hash.txt
+      - run:
+          name: Build
+          command: |
+            mkdir -p build
+            cd build
+            cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
+            make -j4
+      - store_artifacts:
+          path: build/solc/solc
+          destination: solc
+      - persist_to_workspace:
+          root: build
+          paths:
+            - solc/solc
+            - test/soltest
+            - test/tools/solfuzzer
+
+  test_x86_linux:
     docker:
       - image: buildpack-deps:artful
     steps:
@@ -135,6 +168,26 @@ jobs:
       - run:
           name: Tests
           command: scripts/tests.sh --junit_report test_results
+      - store_test_results:
+          path: test_results/
+
+  test_x86_mac:
+    macos:
+      xcode: "9.0"
+    steps:
+      - checkout
+      - attach_workspace:
+          at: build
+      - run:
+          name: Install dependencies
+          command: |
+            brew update
+      - run: mkdir -p test_results
+      - run:
+          name: Tests
+          command: scripts/tests.sh --junit_report test_results
+          environment:
+            TERM: dumb
       - store_test_results:
           path: test_results/
 
@@ -173,9 +226,14 @@ workflows:
           <<: *build_on_tags
           requires:
             - build_emscripten
-      - build_x86: *build_on_tags
-      - test_x86:
+      - build_x86_linux: *build_on_tags
+      - build_x86_mac: *build_on_tags
+      - test_x86_linux:
           <<: *build_on_tags
           requires:
-            - build_x86
+            - build_x86_linux
+      - test_x86_mac:
+          <<: *build_on_tags
+          requires:
+            - build_x86_mac
       - docs: *build_on_tags

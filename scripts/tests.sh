@@ -98,8 +98,11 @@ function run_eth()
     sleep 2
 }
 
-download_eth
-ETH_PID=$(run_eth /tmp/test)
+if [[ "$OSTYPE" != "darwin"* ]]; then
+    download_eth
+    ETH_PID=$(run_eth /tmp/test)
+fi
+
 
 progress="--show-progress"
 if [ "$CIRCLECI" ]
@@ -131,7 +134,11 @@ do
         log=--logger=JUNIT,test_suite,$log_directory/noopt_$vm.xml $testargs_no_opt
       fi
     fi
-    "$REPO_ROOT"/build/test/soltest $progress $log -- --testpath "$REPO_ROOT"/test "$optimize" --evm-version "$vm" --ipcpath /tmp/test/geth.ipc
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        "$REPO_ROOT"/build/test/soltest $progress $log -t !Optimiser/* -- --testpath "$REPO_ROOT"/test "$optimize" --evm-version "$vm" --no-ipc --no-smt
+    else
+        "$REPO_ROOT"/build/test/soltest $progress $log -- --testpath "$REPO_ROOT"/test "$optimize" --evm-version "$vm" --ipcpath /tmp/test/geth.ipc
+    fi
   done
 done
 
