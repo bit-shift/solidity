@@ -103,12 +103,19 @@ printTask "Compiling various other contracts and libraries..."
 cd "$REPO_ROOT"/test/compilationTests/
 for dir in *
 do
-    if [ "$dir" != "README.md" ]
+    ignoreDir=false
+    if [ "$dir" == "corion" ] && [ "$CIRCLECI" ] && [[ "$OSTYPE" == "darwin"* ]]; then
+        ignoreDir=true
+    fi
+    if [ "$dir" != "README.md" ];
     then
-        echo " - $dir"
-        cd "$dir"
-        compileFull *.sol */*.sol
-        cd ..
+        if [ $ignoreDir == false ];
+        then
+            echo " - $dir"
+            cd "$dir"
+            compileFull *.sol */*.sol
+            cd ..
+        fi
     fi
 done
 )
