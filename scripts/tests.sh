@@ -30,6 +30,19 @@ set -e
 
 REPO_ROOT="$(dirname "$0")"/..
 
+if [[ "$OSTYPE" == "darwin"* ]]
+then
+    RUN_SMT_TESTS=false
+    RUN_ENDTOEND_TESTS=true
+    if [ "$CIRCLECI" ]
+    then
+        RUN_ENDTOEND_TESTS=false
+    fi
+else
+    RUN_ENDTOEND_TESTS=true
+    RUN_SMT_TESTS=true
+fi
+
 if [ "$1" = --junit_report ]
 then
     if [ -z "$2" ]
@@ -98,11 +111,25 @@ function run_eth()
     sleep 2
 }
 
-if [[ "$OSTYPE" != "darwin"* ]]; then
+no_ipc="--no-ipc"
+if [ $RUN_ENDTOEND_TESTS == true ];
+then
     download_eth
     ETH_PID=$(run_eth /tmp/test)
+    no_ipc=""
 fi
 
+no_smt="--no-smt"
+if [ $RUN_SMT_TESTS == true ];
+then
+    no_smt=""
+fi
+
+test_selector=""
+if [[ "$OSTYPE" == "darwin"* ]]
+then
+    test_selector="-t !Optimiser/*"
+fi
 
 progress="--show-progress"
 if [ "$CIRCLECI" ]
@@ -134,11 +161,7 @@ do
         log=--logger=JUNIT,test_suite,$log_directory/noopt_$vm.xml $testargs_no_opt
       fi
     fi
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        "$REPO_ROOT"/build/test/soltest $progress $log -t !Optimiser/* -- --testpath "$REPO_ROOT"/test "$optimize" --evm-version "$vm" --no-ipc --no-smt
-    else
-        "$REPO_ROOT"/build/test/soltest $progress $log -- --testpath "$REPO_ROOT"/test "$optimize" --evm-version "$vm" --ipcpath /tmp/test/geth.ipc
-    fi
+    "$REPO_ROOT"/build/test/soltest $progress $log $test_selector -- --testpath "$REPO_ROOT"/test "$optimize" --evm-version "$vm" $no_ipc $no_smt --ipcpath /tmp/test/geth.ipc
   done
 done
 
