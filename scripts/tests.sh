@@ -105,7 +105,7 @@ fi
 
 
 progress="--show-progress"
-if [ "$CIRCLECI" ]
+if [ "$CIRCLECI" ] && [[ "$OSTYPE" != "darwin"* ]]
 then
     progress=""
 fi
@@ -135,7 +135,7 @@ do
       fi
     fi
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        "$REPO_ROOT"/build/test/soltest $progress $log -t !Optimiser/* -- --testpath "$REPO_ROOT"/test "$optimize" --evm-version "$vm" --no-ipc --no-smt
+        "$REPO_ROOT"/build/test/soltest $progress $log -t !Optimiser/* -- --testpath "$REPO_ROOT"/test "$optimize" --evm-version "$vm" --no-ipc
     else
         "$REPO_ROOT"/build/test/soltest $progress $log -- --testpath "$REPO_ROOT"/test "$optimize" --evm-version "$vm" --ipcpath /tmp/test/geth.ipc
     fi
