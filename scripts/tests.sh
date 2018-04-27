@@ -171,6 +171,9 @@ then
     exit 1
 fi
 
-pkill "$ETH_PID" || true
-sleep 4
-pgrep "$ETH_PID" && pkill -9 "$ETH_PID" || true
+if [ $RUN_ENDTOEND_TESTS == true ]
+then
+    pkill "$ETH_PID" || true
+    sleep 4
+    pgrep "$ETH_PID" && pkill -9 "$ETH_PID" || true
+fi
