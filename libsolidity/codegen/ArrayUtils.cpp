@@ -854,12 +854,11 @@ void ArrayUtils::popStorageArrayElement(ArrayType const& _type) const
 			case 1 {
 				// long byte array
 				let length := div(slot_value, 2)
+				let slot := keccak256(0, 0x20)
 				mstore(0, ref)
-
 				switch length
 				case 32
 				{
-					let slot := keccak256(0, 0x20)
 					let data := sload(slot)
 					sstore(slot, 0)
 					data := and(data, not(0xff))
@@ -867,14 +866,14 @@ void ArrayUtils::popStorageArrayElement(ArrayType const& _type) const
 				}
 				default
 				{
-					let slot := div(sub(length, 1), 32)
-					let offset := and(sub(length, 1), 0x1f)
-					slot := add(keccak256(0, 0x20), slot)
+					let slot_offset := div(sub(length, 1), 32)
+					let length_offset := and(sub(length, 1), 0x1f)
+					slot := add(slot, slot_offset)
 					let data := sload(slot)
 
 					// Zero-out the suffix of the byte array by masking it.
 					// ((1<<(8 * (32 - offset))) - 1)
-					let mask := sub(exp(0x100, sub(32, offset)), 1)
+					let mask := sub(exp(0x100, sub(32, length_offset)), 1)
 					data := and(not(mask), data)
 					sstore(slot, data)
 
