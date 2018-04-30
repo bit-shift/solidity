@@ -30,17 +30,15 @@ set -e
 
 REPO_ROOT="$(dirname "$0")"/..
 
+IPC_ENABLED=true
 if [[ "$OSTYPE" == "darwin"* ]]
 then
-    RUN_SMT_TESTS=false
-    RUN_ENDTOEND_TESTS=true
+    SMT_FLAGS="--no-smt"
     if [ "$CIRCLECI" ]
     then
-        RUN_ENDTOEND_TESTS=false
+        IPC_ENABLED=false
+        IPC_FLAGS="--no-ipc"  
     fi
-else
-    RUN_ENDTOEND_TESTS=true
-    RUN_SMT_TESTS=true
 fi
 
 if [ "$1" = --junit_report ]
@@ -111,18 +109,10 @@ function run_eth()
     sleep 2
 }
 
-no_ipc="--no-ipc"
-if [ $RUN_ENDTOEND_TESTS == true ];
+if [ "$IPC_ENABLED" = true ];
 then
     download_eth
     ETH_PID=$(run_eth /tmp/test)
-    no_ipc=""
-fi
-
-no_smt="--no-smt"
-if [ $RUN_SMT_TESTS == true ];
-then
-    no_smt=""
 fi
 
 test_selector=""
@@ -161,7 +151,7 @@ do
         log=--logger=JUNIT,test_suite,$log_directory/noopt_$vm.xml $testargs_no_opt
       fi
     fi
-    "$REPO_ROOT"/build/test/soltest $progress $log $test_selector -- --testpath "$REPO_ROOT"/test "$optimize" --evm-version "$vm" $no_ipc $no_smt --ipcpath /tmp/test/geth.ipc
+    "$REPO_ROOT"/build/test/soltest $progress $log $test_selector -- --testpath "$REPO_ROOT"/test "$optimize" --evm-version "$vm" $SMT_FLAGS $IPC_FLAGS  --ipcpath /tmp/test/geth.ipc
   done
 done
 
@@ -171,7 +161,7 @@ then
     exit 1
 fi
 
-if [ $RUN_ENDTOEND_TESTS == true ]
+if [ "$IPC_ENABLED" = true ]
 then
     pkill "$ETH_PID" || true
     sleep 4
