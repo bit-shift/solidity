@@ -5069,6 +5069,23 @@ BOOST_AUTO_TEST_CASE(array_pop_uint16)
 	ABI_CHECK(callContractFunction("test()"), encodeArgs(1, 0));
 }
 
+BOOST_AUTO_TEST_CASE(array_pop_uint16_transition)
+{
+	char const* sourceCode = R"(
+		 contract c {
+			 uint16[] data;
+			 function test() public returns (uint l) {
+				 for (uint i = 0; i < 16; i++)
+					 data.push(uint16(i));
+				 data.pop();
+				 l = data.length;
+			 }
+		 }
+	)";
+	compileAndRun(sourceCode);
+	ABI_CHECK(callContractFunction("test()"), encodeArgs(15));
+}
+
 BOOST_AUTO_TEST_CASE(array_pop_empty_exception)
 {
 	char const* sourceCode = R"(
