@@ -4,6 +4,32 @@ defaults:
       filters:
         tags:
           only: /.*/
+  - run_prerelease: &run_prerelease
+      name: Store commit hash and prerelease
+      command: |
+        if [ "$CIRCLE_BRANCH" = release -o -n "$CIRCLE_TAG" ]; then echo -n > prerelease.txt; else date -u +"nightly.%Y.%-m.%-d" > prerelease.txt; fi
+        echo -n "$CIRCLE_SHA1" > commit_hash.txt
+  - run_build: &run_build
+      name: Build
+      command: |
+        mkdir -p build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        make -j4
+  - run_tests: &run_tests
+      name: Tests
+      command: scripts/tests.sh --junit_report test_results
+      environment:
+        TERM: dumb
+  - build_artifacts: &build_artifacts
+      path: build/solc/solc
+      destination: solc
+  - test_artifacts: &test_artifacts
+      root: build
+      paths:
+        - solc/solc
+        - test/soltest
+        - test/tools/solfuzzer
 
 version: 2
 jobs:
@@ -98,26 +124,13 @@ jobs:
             apt-get -qq update
             apt-get -qy install cmake libboost-regex-dev libboost-filesystem-dev libboost-test-dev libboost-system-dev libboost-program-options-dev libz3-dev
       - run:
-          name: Store commit hash and prerelease
-          command: |
-            if [ "$CIRCLE_BRANCH" = release -o -n "$CIRCLE_TAG" ]; then echo -n > prerelease.txt; else date -u +"nightly.%Y.%-m.%-d" > prerelease.txt; fi
-            echo -n "$CIRCLE_SHA1" > commit_hash.txt
+          <<: *run_prerelease
       - run:
-          name: Build
-          command: |
-            mkdir -p build
-            cd build
-            cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
-            make -j4
+          <<: *run_build
       - store_artifacts:
-          path: build/solc/solc
-          destination: solc
+          <<: *build_artifacts
       - persist_to_workspace:
-          root: build
-          paths:
-            - solc/solc
-            - test/soltest
-            - test/tools/solfuzzer
+          <<: *test_artifacts
 
   build_x86_mac:
     macos:
@@ -134,26 +147,13 @@ jobs:
             brew install boost
             brew install cmake
       - run:
-          name: Store commit hash and prerelease
-          command: |
-            if [ "$CIRCLE_BRANCH" = release -o -n "$CIRCLE_TAG" ]; then echo -n > prerelease.txt; else date -u +"nightly.%Y.%-m.%-d" > prerelease.txt; fi
-            echo -n "$CIRCLE_SHA1" > commit_hash.txt
+          <<: *run_prerelease
       - run:
-          name: Build
-          command: |
-            mkdir -p build
-            cd build
-            cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
-            make -j4
+          <<: *run_build
       - store_artifacts:
-          path: build/solc/solc
-          destination: solc
+          <<: *build_artifacts
       - persist_to_workspace:
-          root: build
-          paths:
-            - solc/solc
-            - test/soltest
-            - test/tools/solfuzzer
+          <<: *test_artifacts
 
   test_x86_linux:
     docker:
@@ -169,8 +169,7 @@ jobs:
             apt-get -qy install libz3-dev libleveldb1v5
       - run: mkdir -p test_results
       - run:
-          name: Tests
-          command: scripts/tests.sh --junit_report test_results
+          <<: *run_tests
       - store_test_results:
           path: test_results/
 
@@ -190,10 +189,7 @@ jobs:
             brew install z3
       - run: mkdir -p test_results
       - run:
-          name: Tests
-          command: scripts/tests.sh --junit_report test_results
-          environment:
-            TERM: dumb
+          <<: *run_tests
       - store_test_results:
           path: test_results/
 
@@ -208,10 +204,7 @@ jobs:
             apt-get -qq update
             apt-get -qy install python-sphinx
       - run:
-          name: Store commit hash and prerelease
-          command: |
-            if [ "$CIRCLE_BRANCH" = release -o -n "$CIRCLE_TAG" ]; then echo -n > prerelease.txt; else date -u +"nightly.%Y.%-m.%-d" > prerelease.txt; fi
-            echo -n "$CIRCLE_SHA1" > commit_hash.txt
+          <<: *run_prerelease
       - run:
           name: Build documentation
           command: ./scripts/docs.sh
