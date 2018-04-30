@@ -37,7 +37,7 @@ then
     if [ "$CIRCLECI" ]
     then
         IPC_ENABLED=false
-        IPC_FLAGS="--no-ipc"  
+        IPC_FLAGS="--no-ipc"
     fi
 fi
 
@@ -145,7 +145,7 @@ do
         log=--logger=JUNIT,test_suite,$log_directory/noopt_$vm.xml $testargs_no_opt
       fi
     fi
-    "$REPO_ROOT"/build/test/soltest $progress $log $test_selector -- --testpath "$REPO_ROOT"/test --evm-version "$vm" $SMT_FLAGS $IPC_FLAGS  --ipcpath /tmp/test/geth.ipc
+    "$REPO_ROOT"/build/test/soltest $progress $log -- --testpath "$REPO_ROOT"/test "$optimize" --evm-version "$vm" $SMT_FLAGS $IPC_FLAGS  --ipcpath /tmp/test/geth.ipc
   done
 done
 
