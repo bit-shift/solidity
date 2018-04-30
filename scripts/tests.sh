@@ -115,12 +115,6 @@ then
     ETH_PID=$(run_eth /tmp/test)
 fi
 
-test_selector=""
-if [[ "$OSTYPE" == "darwin"* ]]
-then
-    test_selector="-t !Optimiser/*"
-fi
-
 progress="--show-progress"
 if [ "$CIRCLECI" ]
 then
@@ -151,7 +145,7 @@ do
         log=--logger=JUNIT,test_suite,$log_directory/noopt_$vm.xml $testargs_no_opt
       fi
     fi
-    "$REPO_ROOT"/build/test/soltest $progress $log $test_selector -- --testpath "$REPO_ROOT"/test "$optimize" --evm-version "$vm" $SMT_FLAGS $IPC_FLAGS  --ipcpath /tmp/test/geth.ipc
+    "$REPO_ROOT"/build/test/soltest $progress $log $test_selector -- --testpath "$REPO_ROOT"/test --evm-version "$vm" $SMT_FLAGS $IPC_FLAGS  --ipcpath /tmp/test/geth.ipc
   done
 done
 
