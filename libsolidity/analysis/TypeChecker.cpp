@@ -1364,11 +1364,12 @@ bool TypeChecker::visit(Assignment const& _assignment)
 	{
 		// compound assignment
 		_assignment.rightHandSide().accept(*this);
-		TypePointer resultType = t->binaryOperatorResult(
+		auto result = t->binaryOperatorResult(
 			Token::AssignmentToBinaryOp(_assignment.assignmentOperator()),
 			type(_assignment.rightHandSide())
 		);
-		if (!resultType || *resultType != *t)
+		auto* resultType = boost::get<TypePointer>(&result);
+		if (!resultType || *resultType->get() != *t)
 			m_errorReporter.typeError(
 				_assignment.location(),
 				"Operator " +
@@ -1378,6 +1379,7 @@ bool TypeChecker::visit(Assignment const& _assignment)
 				" and " +
 				type(_assignment.rightHandSide())->toString()
 			);
+
 	}
 	return false;
 }
@@ -1510,7 +1512,8 @@ void TypeChecker::endVisit(BinaryOperation const& _operation)
 {
 	TypePointer const& leftType = type(_operation.leftExpression());
 	TypePointer const& rightType = type(_operation.rightExpression());
-	TypePointer commonType = leftType->binaryOperatorResult(_operation.getOperator(), rightType);
+	TypeResult result = leftType->binaryOperatorResult(_operation.getOperator(), rightType);
+	auto* commonType = boost::get<TypePointer>(&result);
 	if (!commonType)
 	{
 		m_errorReporter.typeError(
@@ -1522,13 +1525,13 @@ void TypeChecker::endVisit(BinaryOperation const& _operation)
 			" and " +
 			rightType->toString()
 		);
-		commonType = leftType;
+		*commonType = leftType;
 	}
-	_operation.annotation().commonType = commonType;
+	_operation.annotation().commonType = *commonType;
 	_operation.annotation().type =
 		Token::isCompareOp(_operation.getOperator()) ?
 		make_shared<BoolType>() :
-		commonType;
+		*commonType;
 	_operation.annotation().isPure =
 		_operation.leftExpression().annotation().isPure &&
 		_operation.rightExpression().annotation().isPure;
@@ -1541,15 +1544,15 @@ void TypeChecker::endVisit(BinaryOperation const& _operation)
 			rightType->category() != Type::Category::RationalNumber
 		)
 			if ((
-				commonType->category() == Type::Category::Integer &&
-				dynamic_cast<IntegerType const&>(*commonType).numBits() != 256
+				(*commonType)->category() == Type::Category::Integer &&
+				dynamic_cast<IntegerType const&>(*commonType->get()).numBits() != 256
 			) || (
-				commonType->category() == Type::Category::FixedPoint &&
-				dynamic_cast<FixedPointType const&>(*commonType).numBits() != 256
+				(*commonType)->category() == Type::Category::FixedPoint &&
+				dynamic_cast<FixedPointType const&>(*commonType->get()).numBits() != 256
 			))
 				m_errorReporter.warning(
 					_operation.location(),
-					"Result of " + operation + " has type " + commonType->toString() + " and thus "
+					"Result of " + operation + " has type " + (*commonType)->toString() + " and thus "
 					"might overflow. Silence this warning by converting the literal to the "
 					"expected type."
 				);
