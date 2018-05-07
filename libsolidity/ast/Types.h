@@ -204,7 +204,10 @@ public:
 	/// The default implementation allows comparison operators if a common type exists
 	virtual TypeResult binaryOperatorResult(Token::Value _operator, TypePointer const& _other) const
 	{
-		return Token::isCompareOp(_operator) ? commonType(shared_from_this(), _other) : TypePointer();
+//		return Token::isCompareOp(_operator) ? commonType(shared_from_this(), _other) : TypeError();
+		if (Token::isCompareOp(_operator))
+			return commonType(shared_from_this(), _other);
+		return TypeError();
 	}
 
 	virtual bool operator==(Type const& _other) const { return category() == _other.category(); }
@@ -488,7 +491,7 @@ public:
 	virtual bool isImplicitlyConvertibleTo(Type const& _convertTo) const override;
 	virtual TypeResult binaryOperatorResult(Token::Value, TypePointer const&) const override
 	{
-		return TypePointer();
+		return TypeError();
 	}
 
 	virtual std::string richIdentifier() const override;
@@ -576,7 +579,7 @@ public:
 	virtual TypePointer unaryOperatorResult(Token::Value _operator) const override;
 	virtual TypeResult binaryOperatorResult(Token::Value, TypePointer const&) const override
 	{
-		return TypePointer();
+		return TypeError();
 	}
 	virtual unsigned memoryHeadSize() const override { return 32; }
 
@@ -868,7 +871,7 @@ public:
 	virtual bool isImplicitlyConvertibleTo(Type const& _other) const override;
 	virtual std::string richIdentifier() const override;
 	virtual bool operator==(Type const& _other) const override;
-	virtual TypeResult binaryOperatorResult(Token::Value, TypePointer const&) const override { return TypePointer(); }
+	virtual TypeResult binaryOperatorResult(Token::Value, TypePointer const&) const override { return TypeError(); }
 	virtual std::string toString(bool) const override;
 	virtual bool canBeStored() const override { return false; }
 	virtual u256 storageSize() const override;
@@ -1119,7 +1122,7 @@ public:
 	virtual std::string toString(bool _short) const override;
 	virtual std::string canonicalName() const override;
 	virtual bool canLiveOutsideStorage() const override { return false; }
-	virtual TypeResult binaryOperatorResult(Token::Value, TypePointer const&) const override { return TypePointer(); }
+	virtual TypeResult binaryOperatorResult(Token::Value, TypePointer const&) const override { return TypeError(); }
 	virtual TypePointer encodingType() const override
 	{
 		return std::make_shared<IntegerType>(256);
@@ -1152,7 +1155,7 @@ public:
 	explicit TypeType(TypePointer const& _actualType): m_actualType(_actualType) {}
 	TypePointer const& actualType() const { return m_actualType; }
 
-	virtual TypeResult binaryOperatorResult(Token::Value, TypePointer const&) const override { return TypePointer(); }
+	virtual TypeResult binaryOperatorResult(Token::Value, TypePointer const&) const override { return TypeError(); }
 	virtual std::string richIdentifier() const override;
 	virtual bool operator==(Type const& _other) const override;
 	virtual bool canBeStored() const override { return false; }
@@ -1177,7 +1180,7 @@ public:
 	virtual Category category() const override { return Category::Modifier; }
 	explicit ModifierType(ModifierDefinition const& _modifier);
 
-	virtual TypeResult binaryOperatorResult(Token::Value, TypePointer const&) const override { return TypePointer(); }
+	virtual TypeResult binaryOperatorResult(Token::Value, TypePointer const&) const override { return TypeError(); }
 	virtual bool canBeStored() const override { return false; }
 	virtual u256 storageSize() const override;
 	virtual bool canLiveOutsideStorage() const override { return false; }
@@ -1203,7 +1206,7 @@ public:
 
 	explicit ModuleType(SourceUnit const& _source): m_sourceUnit(_source) {}
 
-	virtual TypeResult binaryOperatorResult(Token::Value, TypePointer const&) const override { return TypePointer(); }
+	virtual TypeResult binaryOperatorResult(Token::Value, TypePointer const&) const override { return TypeError(); }
 	virtual std::string richIdentifier() const override;
 	virtual bool operator==(Type const& _other) const override;
 	virtual bool canBeStored() const override { return false; }
@@ -1232,7 +1235,7 @@ public:
 
 	virtual TypeResult binaryOperatorResult(Token::Value, TypePointer const&) const override
 	{
-		return TypePointer();
+		return TypeError();
 	}
 
 	virtual std::string richIdentifier() const override;
@@ -1263,7 +1266,7 @@ public:
 	virtual std::string richIdentifier() const override { return "t_inaccessible"; }
 	virtual bool isImplicitlyConvertibleTo(Type const&) const override { return false; }
 	virtual bool isExplicitlyConvertibleTo(Type const&) const override { return false; }
-	virtual TypeResult binaryOperatorResult(Token::Value, TypePointer const&) const override { return TypePointer(); }
+	virtual TypeResult binaryOperatorResult(Token::Value, TypePointer const&) const override { return TypeError(); }
 	virtual unsigned calldataEncodedSize(bool _padded) const override { (void)_padded; return 32; }
 	virtual bool canBeStored() const override { return false; }
 	virtual bool canLiveOutsideStorage() const override { return false; }

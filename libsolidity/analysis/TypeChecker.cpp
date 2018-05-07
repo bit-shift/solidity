@@ -1510,28 +1510,36 @@ bool TypeChecker::visit(UnaryOperation const& _operation)
 
 void TypeChecker::endVisit(BinaryOperation const& _operation)
 {
+	std::cout << "TypeChecker::endVisit(BinaryOperation)" << std::endl;
+	TypePointer commonType;
 	TypePointer const& leftType = type(_operation.leftExpression());
 	TypePointer const& rightType = type(_operation.rightExpression());
 	TypeResult result = leftType->binaryOperatorResult(_operation.getOperator(), rightType);
-	auto* commonType = boost::get<TypePointer>(&result);
-	if (!commonType)
+	if (TypeError* error = boost::get<TypeError>(&result))
 	{
-		m_errorReporter.typeError(
-			_operation.location(),
-			"Operator " +
-			string(Token::toString(_operation.getOperator())) +
-			" not compatible with types " +
-			leftType->toString() +
-			" and " +
-			rightType->toString()
-		);
-		*commonType = leftType;
+		if (error->message().empty())
+			m_errorReporter.typeError(
+				_operation.location(),
+				"Operator " +
+				string(Token::toString(_operation.getOperator())) +
+				" not compatible with types " +
+				leftType->toString() +
+				" and " +
+				rightType->toString()
+			);
+		else
+			m_errorReporter.typeError(
+				_operation.location(),
+				error.message()
+			);
+		commonType = leftType;
+		std::cout << "not compatible with types" << std::endl;
 	}
-	_operation.annotation().commonType = *commonType;
+	_operation.annotation().commonType = commonType;
 	_operation.annotation().type =
 		Token::isCompareOp(_operation.getOperator()) ?
 		make_shared<BoolType>() :
-		*commonType;
+		commonType;
 	_operation.annotation().isPure =
 		_operation.leftExpression().annotation().isPure &&
 		_operation.rightExpression().annotation().isPure;
@@ -1544,15 +1552,15 @@ void TypeChecker::endVisit(BinaryOperation const& _operation)
 			rightType->category() != Type::Category::RationalNumber
 		)
 			if ((
-				(*commonType)->category() == Type::Category::Integer &&
-				dynamic_cast<IntegerType const&>(*commonType->get()).numBits() != 256
+				commonType->category() == Type::Category::Integer &&
+				dynamic_cast<IntegerType const&>(*commonType).numBits() != 256
 			) || (
-				(*commonType)->category() == Type::Category::FixedPoint &&
-				dynamic_cast<FixedPointType const&>(*commonType->get()).numBits() != 256
+				commonType->category() == Type::Category::FixedPoint &&
+				dynamic_cast<FixedPointType const&>(*commonType).numBits() != 256
 			))
 				m_errorReporter.warning(
 					_operation.location(),
-					"Result of " + operation + " has type " + (*commonType)->toString() + " and thus "
+					"Result of " + operation + " has type " + commonType->toString() + " and thus "
 					"might overflow. Silence this warning by converting the literal to the "
 					"expected type."
 				);

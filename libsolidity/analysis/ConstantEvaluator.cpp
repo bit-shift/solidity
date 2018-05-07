@@ -42,14 +42,8 @@ void ConstantEvaluator::endVisit(BinaryOperation const& _operation)
 	if (left && right)
 	{
 		auto result = left->binaryOperatorResult(_operation.getOperator(), right);
-		if (TypePointer* commonType = boost::get<TypePointer>(&result))
-			setType(
-				_operation,
-				Token::isCompareOp(_operation.getOperator()) ?
-				make_shared<BoolType>() :
-				*commonType
-			);
-		else
+		TypePointer* commonType = boost::get<TypePointer>(&result);
+		if (!commonType)
 			m_errorReporter.fatalTypeError(
 				_operation.location(),
 				"Operator " +
@@ -59,6 +53,13 @@ void ConstantEvaluator::endVisit(BinaryOperation const& _operation)
 				" and " +
 				right->toString()
 			);
+		setType(
+			_operation,
+			Token::isCompareOp(_operation.getOperator()) ?
+			make_shared<BoolType>() :
+			*commonType
+		);
+
 
 	}
 }
