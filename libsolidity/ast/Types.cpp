@@ -537,46 +537,46 @@ bigint IntegerType::maxValue() const
 		return (bigint(1) << m_bits) - 1;
 }
 
-TypePointer IntegerType::binaryOperatorResult(Token::Value _operator, TypePointer const& _other) const
+TypeResult IntegerType::binaryOperatorResult(Token::Value _operator, TypePointer const& _other) const
 {
 	if (
 		_other->category() != Category::RationalNumber &&
 		_other->category() != Category::FixedPoint &&
 		_other->category() != category()
 	)
-		return TypePointer();
+		return experimental::Err();
 	if (Token::isShiftOp(_operator))
 	{
 		// Shifts are not symmetric with respect to the type
 		if (isAddress())
-			return TypePointer();
+			return experimental::Err();
 		if (isValidShiftAndAmountType(_operator, *_other))
 			return shared_from_this();
 		else
-			return TypePointer();
+			return experimental::Err();
 	}
 
 	auto commonType = Type::commonType(shared_from_this(), _other); //might be a integer or fixed point
 	if (!commonType)
-		return TypePointer();
+		return experimental::Err();
 
 	// All integer types can be compared
 	if (Token::isCompareOp(_operator))
 		return commonType;
 	if (Token::isBooleanOp(_operator))
-		return TypePointer();
+		return experimental::Err();
 	if (auto intType = dynamic_pointer_cast<IntegerType const>(commonType))
 	{
 		// Nothing else can be done with addresses
 		if (intType->isAddress())
-			return TypePointer();
+			return experimental::Err();
 		// Signed EXP is not allowed
 		if (Token::Exp == _operator && intType->isSigned())
-			return TypePointer();
+			return experimental::Err();
 	}
 	else if (auto fixType = dynamic_pointer_cast<FixedPointType const>(commonType))
 		if (Token::Exp == _operator)
-			return TypePointer();
+			return experimental::Err();
 	return commonType;
 }
 
@@ -678,18 +678,18 @@ bigint FixedPointType::minIntegerValue() const
 		return bigint(0);
 }
 
-TypePointer FixedPointType::binaryOperatorResult(Token::Value _operator, TypePointer const& _other) const
+TypeResult FixedPointType::binaryOperatorResult(Token::Value _operator, TypePointer const& _other) const
 {
 	auto commonType = Type::commonType(shared_from_this(), _other);
 
 	if (!commonType)
-		return TypePointer();
+		return experimental::Err();
 
 	// All fixed types can be compared
 	if (Token::isCompareOp(_operator))
 		return commonType;
 	if (Token::isBitOp(_operator) || Token::isBooleanOp(_operator) || _operator == Token::Exp)
-		return TypePointer();
+		return experimental::Err();
 	return commonType;
 }
 
@@ -911,17 +911,17 @@ TypePointer RationalNumberType::unaryOperatorResult(Token::Value _operator) cons
 	return make_shared<RationalNumberType>(value);
 }
 
-TypePointer RationalNumberType::binaryOperatorResult(Token::Value _operator, TypePointer const& _other) const
+TypeResult RationalNumberType::binaryOperatorResult(Token::Value _operator, TypePointer const& _other) const
 {
 	if (_other->category() == Category::Integer || _other->category() == Category::FixedPoint)
 	{
 		auto commonType = Type::commonType(shared_from_this(), _other);
 		if (!commonType)
-			return TypePointer();
+			return experimental::Err();
 		return commonType->binaryOperatorResult(_operator, _other);
 	}
 	else if (_other->category() != category())
-		return TypePointer();
+		return experimental::Err();
 
 	RationalNumberType const& other = dynamic_cast<RationalNumberType const&>(*_other);
 	if (Token::isCompareOp(_operator))
@@ -932,7 +932,7 @@ TypePointer RationalNumberType::binaryOperatorResult(Token::Value _operator, Typ
 		TypePointer thisMobile = mobileType();
 		TypePointer otherMobile = other.mobileType();
 		if (!thisMobile || !otherMobile)
-			return TypePointer();
+			return experimental::Err();
 		return thisMobile->binaryOperatorResult(_operator, otherMobile);
 	}
 	else
@@ -944,17 +944,17 @@ TypePointer RationalNumberType::binaryOperatorResult(Token::Value _operator, Typ
 		//bit operations will only be enabled for integers and fixed types that resemble integers
 		case Token::BitOr:
 			if (fractional)
-				return TypePointer();
+				return experimental::Err();
 			value = m_value.numerator() | other.m_value.numerator();
 			break;
 		case Token::BitXor:
 			if (fractional)
-				return TypePointer();
+				return experimental::Err();
 			value = m_value.numerator() ^ other.m_value.numerator();
 			break;
 		case Token::BitAnd:
 			if (fractional)
-				return TypePointer();
+				return experimental::Err();
 			value = m_value.numerator() & other.m_value.numerator();
 			break;
 		case Token::Add:
@@ -968,13 +968,13 @@ TypePointer RationalNumberType::binaryOperatorResult(Token::Value _operator, Typ
 			break;
 		case Token::Div:
 			if (other.m_value == rational(0))
-				return TypePointer();
+				return experimental::Err();
 			else
 				value = m_value / other.m_value;
 			break;
 		case Token::Mod:
 			if (other.m_value == rational(0))
-				return TypePointer();
+				return experimental::Err();
 			else if (fractional)
 			{
 				rational tempValue = m_value / other.m_value;
@@ -987,7 +987,7 @@ TypePointer RationalNumberType::binaryOperatorResult(Token::Value _operator, Typ
 		{
 			using boost::multiprecision::pow;
 			if (other.isFractional())
-				return TypePointer();
+				return experimental::Err();
 			solAssert(other.m_value.denominator() == 1, "");
 			bigint const& exp = other.m_value.numerator();
 
@@ -1005,13 +1005,13 @@ TypePointer RationalNumberType::binaryOperatorResult(Token::Value _operator, Typ
 			else
 			{
 				if (abs(exp) > numeric_limits<uint32_t>::max())
-					return TypePointer(); // This will need too much memory to represent.
+					return experimental::Err(); // This will need too much memory to represent.
 
 				uint32_t absExp = bigint(abs(exp)).convert_to<uint32_t>();
 
 				// Limit size to 4096 bits
 				if (!fitsPrecisionExp(abs(m_value.numerator()), absExp) || !fitsPrecisionExp(abs(m_value.denominator()), absExp))
-					return TypePointer();
+					return experimental::Err();
 
 				static auto const optimizedPow = [](bigint const& _base, uint32_t _exponent) -> bigint {
 					if (_base == 1)
@@ -1037,18 +1037,18 @@ TypePointer RationalNumberType::binaryOperatorResult(Token::Value _operator, Typ
 		{
 			using boost::multiprecision::pow;
 			if (fractional)
-				return TypePointer();
+				return experimental::Err();
 			else if (other.m_value < 0)
-				return TypePointer();
+				return experimental::Err();
 			else if (other.m_value > numeric_limits<uint32_t>::max())
-				return TypePointer();
+				return experimental::Err();
 			if (m_value.numerator() == 0)
 				value = 0;
 			else
 			{
 				uint32_t exponent = other.m_value.numerator().convert_to<uint32_t>();
 				if (!fitsPrecisionBase2(abs(m_value.numerator()), exponent))
-					return TypePointer();
+					return experimental::Err();
 				value = m_value.numerator() * pow(bigint(2), exponent);
 			}
 			break;
@@ -1059,11 +1059,11 @@ TypePointer RationalNumberType::binaryOperatorResult(Token::Value _operator, Typ
 		{
 			namespace mp = boost::multiprecision;
 			if (fractional)
-				return TypePointer();
+				return experimental::Err();
 			else if (other.m_value < 0)
-				return TypePointer();
+				return experimental::Err();
 			else if (other.m_value > numeric_limits<uint32_t>::max())
-				return TypePointer();
+				return experimental::Err();
 			if (m_value.numerator() == 0)
 				value = 0;
 			else
@@ -1077,12 +1077,12 @@ TypePointer RationalNumberType::binaryOperatorResult(Token::Value _operator, Typ
 			break;
 		}
 		default:
-			return TypePointer();
+			return experimental::Err();
 		}
 
 		// verify that numerator and denominator fit into 4096 bit after every operation
 		if (value.numerator() != 0 && max(mostSignificantBit(abs(value.numerator())), mostSignificantBit(abs(value.denominator()))) > 4096)
-			return TypePointer();
+			return experimental::Err();
 
 		return make_shared<RationalNumberType>(value);
 	}
@@ -1297,25 +1297,25 @@ TypePointer FixedBytesType::unaryOperatorResult(Token::Value _operator) const
 	return TypePointer();
 }
 
-TypePointer FixedBytesType::binaryOperatorResult(Token::Value _operator, TypePointer const& _other) const
+TypeResult FixedBytesType::binaryOperatorResult(Token::Value _operator, TypePointer const& _other) const
 {
 	if (Token::isShiftOp(_operator))
 	{
 		if (isValidShiftAndAmountType(_operator, *_other))
 			return shared_from_this();
 		else
-			return TypePointer();
+			return experimental::Err();
 	}
 
 	auto commonType = dynamic_pointer_cast<FixedBytesType const>(Type::commonType(shared_from_this(), _other));
 	if (!commonType)
-		return TypePointer();
+		return experimental::Err();
 
 	// FixedBytes can be compared and have bitwise operators applied to them
 	if (Token::isCompareOp(_operator) || Token::isBitOp(_operator))
 		return commonType;
 
-	return TypePointer();
+	return experimental::Err();
 }
 
 MemberList::MemberMap FixedBytesType::nativeMembers(const ContractDefinition*) const
@@ -1354,14 +1354,14 @@ TypePointer BoolType::unaryOperatorResult(Token::Value _operator) const
 	return (_operator == Token::Not) ? shared_from_this() : TypePointer();
 }
 
-TypePointer BoolType::binaryOperatorResult(Token::Value _operator, TypePointer const& _other) const
+TypeResult BoolType::binaryOperatorResult(Token::Value _operator, TypePointer const& _other) const
 {
 	if (category() != _other->category())
-		return TypePointer();
+		return experimental::Err();
 	if (Token::isCompareOp(_operator) || _operator == Token::And || _operator == Token::Or)
 		return _other;
 	else
-		return TypePointer();
+		return experimental::Err();
 }
 
 bool ContractType::isImplicitlyConvertibleTo(Type const& _convertTo) const
@@ -2564,14 +2564,14 @@ TypePointer FunctionType::unaryOperatorResult(Token::Value _operator) const
 	return TypePointer();
 }
 
-TypePointer FunctionType::binaryOperatorResult(Token::Value _operator, TypePointer const& _other) const
+TypeResult FunctionType::binaryOperatorResult(Token::Value _operator, TypePointer const& _other) const
 {
 	if (_other->category() != category() || !(_operator == Token::Equal || _operator == Token::NotEqual))
-		return TypePointer();
+		return experimental::Err();
 	FunctionType const& other = dynamic_cast<FunctionType const&>(*_other);
 	if (kind() == Kind::Internal && other.kind() == Kind::Internal && sizeOnStack() == 1 && other.sizeOnStack() == 1)
 		return commonType(shared_from_this(), _other);
-	return TypePointer();
+	return experimental::Err();
 }
 
 string FunctionType::canonicalName() const
