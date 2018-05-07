@@ -1364,7 +1364,7 @@ bool TypeChecker::visit(Assignment const& _assignment)
 	{
 		// compound assignment
 		_assignment.rightHandSide().accept(*this);
-		auto result = t->binaryOperatorResult(
+		TypeResult result = t->binaryOperatorResult(
 			Token::AssignmentToBinaryOp(_assignment.assignmentOperator()),
 			type(_assignment.rightHandSide())
 		);
@@ -1517,6 +1517,7 @@ void TypeChecker::endVisit(BinaryOperation const& _operation)
 	TypeResult result = leftType->binaryOperatorResult(_operation.getOperator(), rightType);
 	if (TypeError* error = boost::get<TypeError>(&result))
 	{
+		std::cout << "ERROR!!!" << std::endl;
 		if (error->message().empty())
 			m_errorReporter.typeError(
 				_operation.location(),
@@ -1530,10 +1531,9 @@ void TypeChecker::endVisit(BinaryOperation const& _operation)
 		else
 			m_errorReporter.typeError(
 				_operation.location(),
-				error.message()
+				error->message()
 			);
 		commonType = leftType;
-		std::cout << "not compatible with types" << std::endl;
 	}
 	_operation.annotation().commonType = commonType;
 	_operation.annotation().type =

@@ -42,25 +42,30 @@ void ConstantEvaluator::endVisit(BinaryOperation const& _operation)
 	if (left && right)
 	{
 		auto result = left->binaryOperatorResult(_operation.getOperator(), right);
-		TypePointer* commonType = boost::get<TypePointer>(&result);
-		if (!commonType)
-			m_errorReporter.fatalTypeError(
-				_operation.location(),
-				"Operator " +
-				string(Token::toString(_operation.getOperator())) +
-				" not compatible with types " +
-				left->toString() +
-				" and " +
-				right->toString()
-			);
+		if (TypeError* error = boost::get<TypeError>(&result))
+		{
+			if (error->message().empty())
+				m_errorReporter.fatalTypeError(
+					_operation.location(),
+					"Operator " +
+					string(Token::toString(_operation.getOperator())) +
+					" not compatible with types " +
+					left->toString() +
+					" and " +
+					right->toString()
+				);
+			else
+				m_errorReporter.fatalTypeError(
+					_operation.location(),
+					error->message()
+				);
+		}
 		setType(
 			_operation,
 			Token::isCompareOp(_operation.getOperator()) ?
 			make_shared<BoolType>() :
-			*commonType
+			TypePointer()
 		);
-
-
 	}
 }
 
