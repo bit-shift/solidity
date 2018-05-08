@@ -43,26 +43,24 @@ void ConstantEvaluator::endVisit(BinaryOperation const& _operation)
 	{
 		auto result = left->binaryOperatorResult(_operation.getOperator(), right);
 		TypePointer type;
-		experimental::match<TypePointer>(
+
+		std::string defaultError =
+			"Operator " +
+			string(Token::toString(_operation.getOperator())) +
+			" not compatible with types " +
+			left->toString() +
+			" and " +
+			right->toString();
+
+		experimental::match_result<TypePointer>(
 			result,
 			[&](TypePointer const& _type) { type = _type; },
 			[&](experimental::Err _err)
 			{
 				if (_err.message().empty())
-					m_errorReporter.fatalTypeError(
-						_operation.location(),
-						"Operator " +
-						string(Token::toString(_operation.getOperator())) +
-						" not compatible with types " +
-						left->toString() +
-						" and " +
-						right->toString()
-					);
+					m_errorReporter.fatalTypeError(_operation.location(), defaultError);
 				else
-					m_errorReporter.fatalTypeError(
-						_operation.location(),
-						_err.message()
-					);
+					m_errorReporter.fatalTypeError(_operation.location(), _err.message());
 			}
 		);
 		setType(

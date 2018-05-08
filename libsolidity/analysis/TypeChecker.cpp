@@ -1368,38 +1368,28 @@ bool TypeChecker::visit(Assignment const& _assignment)
 			Token::AssignmentToBinaryOp(_assignment.assignmentOperator()),
 			type(_assignment.rightHandSide())
 		);
-		experimental::match<TypePointer>(
+
+		std::string defaultError =
+			"Operator " +
+			string(Token::toString(_assignment.assignmentOperator())) +
+			" not compatible with types " +
+			t->toString() +
+			" and " +
+			type(_assignment.rightHandSide())->toString();
+
+		experimental::match_result<TypePointer>(
 			result,
 			[&](TypePointer const& _type)
 			{
 				if (*_type != *t)
-					m_errorReporter.typeError(
-						_assignment.location(),
-						"Operator " +
-						string(Token::toString(_assignment.assignmentOperator())) +
-						" not compatible with types " +
-						t->toString() +
-						" and " +
-						type(_assignment.rightHandSide())->toString()
-					);
+					m_errorReporter.typeError(_assignment.location(), defaultError);
 			},
 			[&](experimental::Err _err)
 			{
 				if (_err.message().empty())
-					m_errorReporter.typeError(
-						_assignment.location(),
-						"Operator " +
-						string(Token::toString(_assignment.assignmentOperator())) +
-						" not compatible with types " +
-						t->toString() +
-						" and " +
-						type(_assignment.rightHandSide())->toString()
-					);
+					m_errorReporter.typeError(_assignment.location(), defaultError);
 				else
-					m_errorReporter.fatalTypeError(
-						_assignment.location(),
-						_err.message()
-					);
+					m_errorReporter.fatalTypeError(_assignment.location(), _err.message());
 			}
 		);
 	}

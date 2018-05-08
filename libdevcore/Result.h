@@ -74,7 +74,7 @@ private:
 
 
 template<class T>
-void match(
+void match_result(
 	Result<T> const& _result,
 	OnSuccess<T> const& _ok,
 	OnError const& _err
