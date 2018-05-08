@@ -1860,16 +1860,30 @@ bool TypeChecker::visit(FunctionCall const& _functionCall)
 						{
 							found = true;
 							// check type convertible
-							if (!type(*arguments[i])->isImplicitlyConvertibleTo(*parameterTypes[j]))
-								m_errorReporter.typeError(
-									arguments[i]->location(),
-									"Invalid type for argument in function call. "
-									"Invalid implicit conversion from " +
-									type(*arguments[i])->toString() +
-									" to " +
-									parameterTypes[i]->toString() +
-									" requested."
-								);
+							std::string defaultError =
+								"Invalid type for argument in function call. "
+								"Invalid implicit conversion from " +
+								type(*arguments[i])->toString() +
+								" to " +
+								parameterTypes[i]->toString() +
+								" requested.";
+
+							auto result = type(*arguments[i])->isImplicitlyConvertibleTo(*parameterTypes[j]);
+							experimental::match_result<bool>(
+								result,
+								[&](bool const& _ok)
+								{
+									if (!_ok)
+										m_errorReporter.fatalTypeError(_operation.location(), defaultError);
+								},
+								[&](experimental::Err _err)
+								{
+									if (_err.message().empty())
+										m_errorReporter.fatalTypeError(_operation.location(), defaultError);
+									else
+										m_errorReporter.fatalTypeError(_operation.location(), _err.message());
+								}
+							);
 							break;
 						}
 

@@ -55,7 +55,6 @@ using rational = boost::rational<dev::bigint>;
 enum class DataLocation { Storage, CallData, Memory };
 
 using TypeResult = experimental::Result<TypePointer>;
-using BoolResult = experimental::Result<bool>;
 
 
 /**
@@ -183,8 +182,8 @@ public:
 	/// @returns an escaped identifier (will not contain any parenthesis or commas)
 	static std::string escapeIdentifier(std::string const& _identifier);
 
-	virtual bool isImplicitlyConvertibleTo(Type const& _other) const { return *this == _other; }
-	virtual bool isExplicitlyConvertibleTo(Type const& _convertTo) const
+	virtual experimental::Result<bool> isImplicitlyConvertibleTo(Type const& _other) const { return *this == _other; }
+	virtual experimental::Result<bool> isExplicitlyConvertibleTo(Type const& _convertTo) const
 	{
 		return isImplicitlyConvertibleTo(_convertTo);
 	}
@@ -328,8 +327,8 @@ public:
 	explicit IntegerType(unsigned _bits, Modifier _modifier = Modifier::Unsigned);
 
 	virtual std::string richIdentifier() const override;
-	virtual bool isImplicitlyConvertibleTo(Type const& _convertTo) const override;
-	virtual bool isExplicitlyConvertibleTo(Type const& _convertTo) const override;
+	virtual experimental::Result<bool> isImplicitlyConvertibleTo(Type const& _convertTo) const override;
+	virtual experimental::Result<bool> isExplicitlyConvertibleTo(Type const& _convertTo) const override;
 	virtual TypePointer unaryOperatorResult(Token::Value _operator) const override;
 	virtual TypeResult binaryOperatorResult(Token::Value _operator, TypePointer const& _other) const override;
 
@@ -375,8 +374,8 @@ public:
 	explicit FixedPointType(unsigned _totalBits, unsigned _fractionalDigits, Modifier _modifier = Modifier::Unsigned);
 
 	virtual std::string richIdentifier() const override;
-	virtual bool isImplicitlyConvertibleTo(Type const& _convertTo) const override;
-	virtual bool isExplicitlyConvertibleTo(Type const& _convertTo) const override;
+	virtual experimental::Result<bool> isImplicitlyConvertibleTo(Type const& _convertTo) const override;
+	virtual experimental::Result<bool> isExplicitlyConvertibleTo(Type const& _convertTo) const override;
 	virtual TypePointer unaryOperatorResult(Token::Value _operator) const override;
 	virtual TypeResult binaryOperatorResult(Token::Value _operator, TypePointer const& _other) const override;
 
@@ -429,8 +428,8 @@ public:
 	explicit RationalNumberType(rational const& _value):
 		m_value(_value)
 	{}
-	virtual bool isImplicitlyConvertibleTo(Type const& _convertTo) const override;
-	virtual bool isExplicitlyConvertibleTo(Type const& _convertTo) const override;
+	virtual experimental::Result<bool> isImplicitlyConvertibleTo(Type const& _convertTo) const override;
+	virtual experimental::Result<bool> isExplicitlyConvertibleTo(Type const& _convertTo) const override;
 	virtual TypePointer unaryOperatorResult(Token::Value _operator) const override;
 	virtual TypeResult binaryOperatorResult(Token::Value _operator, TypePointer const& _other) const override;
 
@@ -480,7 +479,7 @@ public:
 
 	explicit StringLiteralType(Literal const& _literal);
 
-	virtual bool isImplicitlyConvertibleTo(Type const& _convertTo) const override;
+	virtual experimental::Result<bool> isImplicitlyConvertibleTo(Type const& _convertTo) const override;
 	virtual TypeResult binaryOperatorResult(Token::Value, TypePointer const&) const override
 	{
 		return experimental::Err();
@@ -514,8 +513,8 @@ public:
 
 	explicit FixedBytesType(unsigned _bytes);
 
-	virtual bool isImplicitlyConvertibleTo(Type const& _convertTo) const override;
-	virtual bool isExplicitlyConvertibleTo(Type const& _convertTo) const override;
+	virtual experimental::Result<bool> isImplicitlyConvertibleTo(Type const& _convertTo) const override;
+	virtual experimental::Result<bool> isExplicitlyConvertibleTo(Type const& _convertTo) const override;
 	virtual std::string richIdentifier() const override;
 	virtual bool operator==(Type const& _other) const override;
 	virtual TypePointer unaryOperatorResult(Token::Value _operator) const override;
@@ -643,8 +642,8 @@ public:
 		m_length(_length)
 	{}
 
-	virtual bool isImplicitlyConvertibleTo(Type const& _convertTo) const override;
-	virtual bool isExplicitlyConvertibleTo(Type const& _convertTo) const override;
+	virtual experimental::Result<bool> isImplicitlyConvertibleTo(Type const& _convertTo) const override;
+	virtual experimental::Result<bool> isExplicitlyConvertibleTo(Type const& _convertTo) const override;
 	virtual std::string richIdentifier() const override;
 	virtual bool operator==(const Type& _other) const override;
 	virtual unsigned calldataEncodedSize(bool _padded) const override;
@@ -698,9 +697,9 @@ public:
 	explicit ContractType(ContractDefinition const& _contract, bool _super = false):
 		m_contract(_contract), m_super(_super) {}
 	/// Contracts can be implicitly converted to super classes and to addresses.
-	virtual bool isImplicitlyConvertibleTo(Type const& _convertTo) const override;
+	virtual experimental::Result<bool> isImplicitlyConvertibleTo(Type const& _convertTo) const override;
 	/// Contracts can be converted to themselves and to integers.
-	virtual bool isExplicitlyConvertibleTo(Type const& _convertTo) const override;
+	virtual experimental::Result<bool> isExplicitlyConvertibleTo(Type const& _convertTo) const override;
 	virtual TypePointer unaryOperatorResult(Token::Value _operator) const override;
 	virtual std::string richIdentifier() const override;
 	virtual bool operator==(Type const& _other) const override;
@@ -764,7 +763,7 @@ public:
 	virtual Category category() const override { return Category::Struct; }
 	explicit StructType(StructDefinition const& _struct, DataLocation _location = DataLocation::Storage):
 		ReferenceType(_location), m_struct(_struct) {}
-	virtual bool isImplicitlyConvertibleTo(const Type& _convertTo) const override;
+	virtual experimental::Result<bool> isImplicitlyConvertibleTo(const Type& _convertTo) const override;
 	virtual std::string richIdentifier() const override;
 	virtual bool operator==(Type const& _other) const override;
 	virtual unsigned calldataEncodedSize(bool _padded) const override;
@@ -832,7 +831,7 @@ public:
 	virtual std::string canonicalName() const override;
 	virtual bool isValueType() const override { return true; }
 
-	virtual bool isExplicitlyConvertibleTo(Type const& _convertTo) const override;
+	virtual experimental::Result<bool> isExplicitlyConvertibleTo(Type const& _convertTo) const override;
 	virtual TypePointer encodingType() const override
 	{
 		return std::make_shared<IntegerType>(8 * int(storageBytes()));
@@ -860,7 +859,7 @@ class TupleType: public Type
 public:
 	virtual Category category() const override { return Category::Tuple; }
 	explicit TupleType(std::vector<TypePointer> const& _types = std::vector<TypePointer>()): m_components(_types) {}
-	virtual bool isImplicitlyConvertibleTo(Type const& _other) const override;
+	virtual experimental::Result<bool> isImplicitlyConvertibleTo(Type const& _other) const override;
 	virtual std::string richIdentifier() const override;
 	virtual bool operator==(Type const& _other) const override;
 	virtual TypeResult binaryOperatorResult(Token::Value, TypePointer const&) const override { return experimental::Err(); }
@@ -1006,7 +1005,7 @@ public:
 
 	virtual std::string richIdentifier() const override;
 	virtual bool operator==(Type const& _other) const override;
-	virtual bool isExplicitlyConvertibleTo(Type const& _convertTo) const override;
+	virtual experimental::Result<bool> isExplicitlyConvertibleTo(Type const& _convertTo) const override;
 	virtual TypePointer unaryOperatorResult(Token::Value _operator) const override;
 	virtual TypeResult binaryOperatorResult(Token::Value, TypePointer const&) const override;
 	virtual std::string canonicalName() const override;
@@ -1256,8 +1255,8 @@ public:
 	virtual Category category() const override { return Category::InaccessibleDynamic; }
 
 	virtual std::string richIdentifier() const override { return "t_inaccessible"; }
-	virtual bool isImplicitlyConvertibleTo(Type const&) const override { return false; }
-	virtual bool isExplicitlyConvertibleTo(Type const&) const override { return false; }
+	virtual experimental::Result<bool> isImplicitlyConvertibleTo(Type const&) const override { return false; }
+	virtual experimental::Result<bool> isExplicitlyConvertibleTo(Type const&) const override { return false; }
 	virtual TypeResult binaryOperatorResult(Token::Value, TypePointer const&) const override { return experimental::Err(); }
 	virtual unsigned calldataEncodedSize(bool _padded) const override { (void)_padded; return 32; }
 	virtual bool canBeStored() const override { return false; }
