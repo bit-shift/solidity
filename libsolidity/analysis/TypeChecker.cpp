@@ -1532,33 +1532,36 @@ bool TypeChecker::visit(UnaryOperation const& _operation)
 
 void TypeChecker::endVisit(BinaryOperation const& _operation)
 {
+	TypePointer commonType;
 	TypePointer const& leftType = type(_operation.leftExpression());
 	TypePointer const& rightType = type(_operation.rightExpression());
 	TypeResult result = leftType->binaryOperatorResult(_operation.getOperator(), rightType);
-	TypePointer commonType;
-	experimental::match<TypePointer>(
-		result,
-		[&](TypePointer const& _type) { commonType = _type; },
-		[&](experimental::Err _err)
-		{
-			if (_err.message().empty())
-				m_errorReporter.typeError(
-					_operation.location(),
-					"Operator " +
-					string(Token::toString(_operation.getOperator())) +
-					" not compatible with types " +
-					leftType->toString() +
-					" and " +
-					rightType->toString()
-				);
-			else
-				m_errorReporter.typeError(
-					_operation.location(),
-					_err.message()
-				);
-			commonType = leftType;
-		}
-	);
+
+	if (auto* type = boost::get<TypePointer>(&result))
+	{
+		if (*type)
+			commonType = *type;
+	}
+	else if (auto* err = boost::get<experimental::Err>(&result))
+	{
+		if (err->message().empty())
+			m_errorReporter.typeError(
+				_operation.location(),
+				"Operator " +
+				string(Token::toString(_operation.getOperator())) +
+				" not compatible with types " +
+				leftType->toString() +
+				" and " +
+				rightType->toString()
+			);
+		else
+			m_errorReporter.typeError(
+				_operation.location(),
+				err->message()
+			);
+		commonType = leftType;
+	}
+
 	_operation.annotation().commonType = commonType;
 	_operation.annotation().type =
 		Token::isCompareOp(_operation.getOperator()) ?
